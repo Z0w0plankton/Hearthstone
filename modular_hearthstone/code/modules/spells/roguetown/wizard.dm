@@ -25,7 +25,7 @@
 	catchphrase = null
 	possible_item_intents = list(INTENT_HELP, INTENT_DISARM, /datum/intent/use)
 	icon = 'icons/mob/roguehudgrabs.dmi'
-	icon_state = "pulling"
+	icon_state = "grabbing_greyscale"
 	color = "#3FBAFD" // this produces green because the icon base is yellow but someone else can fix that if they want
 	var/obj/effect/wisp/prestidigitation/mote
 	var/cleanspeed = 35 // adjust this down as low as 15 depending on magic skill
@@ -173,6 +173,45 @@
 	light_range = 4
 	light_flags = NONE
 	light_color = "#3FBAFD"
+
+//A spell to choose new spells, upon spawning or gaining levels
+/obj/effect/proc_holder/spell/invoked/learnspell
+	name = "Attempt to learn a new spell"
+	desc = "Weave a new spell"
+	school = "transmutation"
+	overlay_state = "book1"
+	chargedrain = 0
+	chargetime = 0
+
+/obj/effect/proc_holder/spell/invoked/learnspell/cast(list/targets, mob/user = usr)
+	. = ..()
+	//list of spells you can learn, it may be good to move this somewhere else eventually
+	var/list/choices = list()
+	var/list/spell_choices = list(/obj/effect/proc_holder/spell/invoked/projectile/fireball,
+		/obj/effect/proc_holder/spell/invoked/projectile/fireball/greater,
+		/obj/effect/proc_holder/spell/invoked/projectile/lightningbolt,
+		/obj/effect/proc_holder/spell/invoked/projectile/fetch,
+		/obj/effect/proc_holder/spell/invoked/projectile/spitfire,
+	)
+	for(var/i = 1, i <= spell_choices.len, i++)
+		choices["[spell_choices[i].name]: [spell_choices[i].cost]"] = spell_choices[i]
+		
+	var/choice = input("Choose a spell, points left: [user.mind.spell_points - user.mind.used_spell_points]") as null|anything in choices
+	var/obj/effect/proc_holder/spell/item = choices[choice]
+	if(!item) 
+		return     // user canceled; 
+	for(var/obj/effect/proc_holder/spell/knownspell in user.mind.spell_list)
+		if(knownspell.type == item.type)
+			to_chat(user,span_warning("You already know this one!"))
+			return	//already know the spell
+	if(item.cost > user.mind.spell_points - user.mind.used_spell_points)
+		to_chat(user,span_warning("You do not have enough experience to create a new spell"))
+		return		// not enough spell points
+	else
+		user.mind.used_spell_points += item.cost
+		user.mind.AddSpell(new item)
+		
+
 
 #undef PRESTI_CLEAN
 #undef PRESTI_SPARK
