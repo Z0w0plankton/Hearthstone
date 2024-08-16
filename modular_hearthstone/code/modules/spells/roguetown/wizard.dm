@@ -9,6 +9,7 @@
 	drawmessage = "I prepare to perform a minor arcyne incantation."
 	dropmessage = "I release my minor arcyne focus."
 	school = "transmutation"
+	overlay_state = "prestidigitation"
 	chargedrain = 0
 	chargetime = 0
 	releasedrain = 5 // this influences -every- cost involved in the spell's functionality, if you want to edit specific features, do so in handle_cost
@@ -127,7 +128,7 @@
 
 	user.flash_fullscreen("whiteflash")
 	var/datum/effect_system/spark_spread/S = new()
-	var/turf/front = get_step(user, user.dir)
+	var/obj/structure/front = get_step(user, user.dir)
 	S.set_up(1, 1, front)
 	S.start()
 
@@ -186,12 +187,17 @@
 /obj/effect/proc_holder/spell/invoked/learnspell/cast(list/targets, mob/user = usr)
 	. = ..()
 	//list of spells you can learn, it may be good to move this somewhere else eventually
+	//TODO: make GLOB list of spells, give them a true/false tag for learning, run through that list to generate choices
 	var/list/choices = list()
 	var/list/spell_choices = list(/obj/effect/proc_holder/spell/invoked/projectile/fireball,
 		/obj/effect/proc_holder/spell/invoked/projectile/fireball/greater,
 		/obj/effect/proc_holder/spell/invoked/projectile/lightningbolt,
 		/obj/effect/proc_holder/spell/invoked/projectile/fetch,
 		/obj/effect/proc_holder/spell/invoked/projectile/spitfire,
+		/obj/effect/proc_holder/spell/invoked/forcewall_weak,
+		/obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe,
+		/obj/effect/proc_holder/spell/invoked/message,
+		/obj/effect/proc_holder/spell/invoked/push_spell,
 	)
 	for(var/i = 1, i <= spell_choices.len, i++)
 		choices["[spell_choices[i].name]: [spell_choices[i].cost]"] = spell_choices[i]
@@ -210,8 +216,234 @@
 	else
 		user.mind.used_spell_points += item.cost
 		user.mind.AddSpell(new item)
-		
 
+//forcewall
+/obj/effect/proc_holder/spell/invoked/forcewall_weak
+	name = "Forcewall"
+	desc = ""
+	school = "transmutation"
+	releasedrain = 20
+	chargedrain = 1
+	chargetime = 15
+	charge_max = 35 SECONDS
+	warnie = "spellwarning"
+	no_early_release = TRUE
+	movement_interrupt = FALSE
+	charging_slowdown = 3
+	clothes_req = FALSE
+	active = FALSE
+	sound = 'sound/blank.ogg'
+	overlay_state = "forcewall"
+	range = -1
+	chargedloop = /datum/looping_sound/invokegen
+	associated_skill = /datum/skill/magic/arcane
+	var/wall_type = /obj/structure/forcefield_weak/caster
+	xp_gain = TRUE
+	cost = 1
+
+//adapted from forcefields.dm, this needs to be destructible
+/obj/structure/forcefield_weak
+	desc = "A wall of pure arcyne force."
+	name = "Arcyne Wall"
+	icon = 'icons/effects/effects.dmi'
+	icon_state = "m_shield"
+	break_sound = 'sound/combat/hits/onstone/stonedeath.ogg'
+	attacked_sound = list('sound/combat/hits/onstone/wallhit.ogg', 'sound/combat/hits/onstone/wallhit2.ogg', 'sound/combat/hits/onstone/wallhit3.ogg')
+	opacity = 0
+	density = TRUE
+	max_integrity = 80	//requires balancing to find a good value?
+	CanAtmosPass = ATMOS_PASS_DENSITY
+	var/timeleft = 20 SECONDS  
+
+/obj/structure/forcefield_weak/Initialize()
+	. = ..()
+	if(timeleft)
+		QDEL_IN(src, timeleft) //delete after it runs out
+
+/obj/effect/proc_holder/spell/invoked/forcewall_weak/cast(list/targets,mob/user = usr)
+	new wall_type(get_turf(user),user)
+	if(user.dir == SOUTH || user.dir == NORTH)
+		new wall_type(get_step(user, EAST),user)
+		new wall_type(get_step(user, WEST),user)
+	else
+		new wall_type(get_step(user, NORTH),user)
+		new wall_type(get_step(user, SOUTH),user)
+
+/obj/structure/forcefield_weak
+	var/mob/caster
+
+/obj/structure/forcefield_weak/caster/Initialize(mapload, mob/summoner)
+	. = ..()
+	caster = summoner
+
+/obj/structure/forcefield_weak/caster/CanPass(atom/movable/mover, turf/target)	//only the caster can move through this freely
+	if(mover == caster)		
+		return TRUE
+	if(ismob(mover))
+		var/mob/M = mover
+		if(M.anti_magic_check(chargecost = 0))
+			return TRUE
+	return FALSE
+
+// no slowdown status effect defined, so this just immobilizes for now
+/obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe
+	name = "Ensnare"
+	desc = "placeholder"
+	sound = "placeholder"
+	cost = 1
+	xp_gain = TRUE
+	releasedrain = 20
+	chargedrain = 1
+	chargetime = 20
+	charge_max = 25 SECONDS
+	warnie = "spellwarning"
+	no_early_release = TRUE
+	movement_interrupt = FALSE
+	charging_slowdown = 3
+	chargedloop = /datum/looping_sound/invokegen
+	associated_skill = /datum/skill/magic/arcane
+	range = 6
+	overlay_state = "ensnare"
+	var/area_of_effect = 1
+	var/duration = 5 SECONDS
+
+/obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe/cast(list/targets, mob/user = usr)
+	var/turf/T = get_turf(targets[1])
+
+	for(var/turf/affected_turf in view(area_of_effect, T))
+		if(affected_turf.density)
+			continue
+		new /obj/effect/temp_visual/slowdown_spell_aoe(affected_turf)
+
+	addtimer(CALLBACK(src, PROC_REF(apply_slowdown), T, area_of_effect, 6 SECONDS, user), 0.6 SECONDS)
+	playsound(T,'sound/magic/webspin.ogg', 50, TRUE)
+
+/obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe/proc/apply_slowdown(turf/T, area_of_effect, duration)
+	for(var/mob/living/L in range(area_of_effect, T))
+		if(L.anti_magic_check())
+			visible_message(span_warning("The tendrils of force can't seem to latch onto [L] "))  //antimagic needs some testing
+			playsound(get_turf(L), 'sound/magic/magic_nulled.ogg', 100)
+			return
+		L.Immobilize(duration)
+		L.visible_message("<span class='warning'>[L] is held by tendrils of arcyne force!</span>")
+		new /obj/effect/temp_visual/slowdown_spell_aoe/long(get_turf(L))
+
+/obj/effect/temp_visual/slowdown_spell_aoe
+	icon = 'icons/effects/effects.dmi'
+	icon_state = "curseblob"
+	duration = 1 SECONDS
+
+/obj/effect/temp_visual/slowdown_spell_aoe/long
+	duration = 3 SECONDS
+
+/obj/effect/proc_holder/spell/invoked/message
+	name = "Message"
+	desc = "Latch onto the mind of one who is familair to you, whispering a message into their head"
+	sound = "placeholder"
+	cost = 1
+	xp_gain = TRUE
+	releasedrain = 30
+	chargedrain = 1
+	chargetime = 30
+	charge_max = 60 SECONDS
+	warnie = "spellwarning"
+	no_early_release = TRUE
+	movement_interrupt = TRUE
+	charging_slowdown = 3
+	chargedloop = /datum/looping_sound/invokegen
+	associated_skill = /datum/skill/magic/arcane
+	overlay_state = "message"
+
+/obj/effect/proc_holder/spell/invoked/message/cast(list/targets, mob/user)
+	. = ..()
+	var/input = stripped_input(user, "Who are you trying to contact?")
+	if(!input)
+		return
+	if(!user.key)
+		to_chat(user, span_warning("I sense a body, but the mind does not seem to be there."))
+		revert_cast()	//if the spell fails, cooldown is reset (waiting 1 minute cause your bad at spelling sux)
+		return
+	if(!user.mind || !user.mind.do_i_know(name=input))
+		to_chat(user, span_warning("I don't know anyone by that name."))
+		revert_cast()
+		return
+	for(var/mob/living/carbon/human/HL in GLOB.human_list)
+		if(HL.real_name == input)
+			var/message = stripped_input(user, "You make a connection. What are you trying to say?")
+			to_chat(HL, "Arcyne whispers fill the back of my head, resolving into a clear, if distant, voice: </span><font color=#7246ff>\"[message]\"</font>")
+			// var/reply = "(<a href='?src=[REF(user)];choice=Message;skiprefresh=1'>Reply</a>)"
+			// to_chat(HL, "I feel the arcyne connection hold for a few more moments, I can [reply].")
+			// maybe an option to return a message, here?
+			return
+	to_chat(user, span_warning("I seek a mental connection, but can't find [input]."))
+	revert_cast()
+	return
+
+/obj/effect/proc_holder/spell/invoked/push_spell
+	name = "Repulse"
+	desc = "placeholder"
+	sound = "placeholder"
+	cost = 1
+	xp_gain = TRUE
+	releasedrain = 30
+	chargedrain = 1
+	chargetime = 20
+	charge_max = 25 SECONDS
+	warnie = "spellwarning"
+	no_early_release = TRUE
+	movement_interrupt = FALSE
+	charging_slowdown = 2
+	chargedloop = /datum/looping_sound/invokegen
+	associated_skill = /datum/skill/magic/arcane
+	overlay_state = "placeholder"
+
+/obj/effect/proc_holder/spell/invoked/push_spell/cast(list/targets, mob/user)	
+	var/turf/lower_left
+	var/turf/upper_right
+	switch(user.dir)
+		if(NORTH)
+			lower_left = locate(user.x - 1, user.y + 1, user.z)
+			upper_right = locate(user.x + 1, user.y + 1, user.z)
+		if(SOUTH)
+			lower_left = locate(user.x - 1, user.y - 1, user.z)
+			upper_right = locate(user.x + 1, user.y - 1, user.z)
+		if(WEST)
+			lower_left = locate(user.x - 1, user.y - 1, user.z)
+			upper_right = locate(user.x - 1, user.y + 1, user.z)
+		if(EAST)
+			lower_left = locate(user.x + 1, user.y - 1, user.z)
+			upper_right = locate(user.x + 1, user.y + 1, user.z)
+
+	var/list/things_to_throw = list()
+	for(var/turf/affected_tile in block(lower_left, upper_right)) //everything in the 3x1 block is found.
+		affected_tile.Shake_turf(duration = 0.5 SECONDS)
+		for(var/atom/movable/affected as anything in affected_tile)
+			if(!ishuman(affected) && !istype(affected, /obj/item))
+				affected.Shake(duration = 0.5 SECONDS)
+				continue
+			if(ishuman(affected))
+				var/mob/living/carbon/human/H = affected
+				if(H.stat == DEAD)
+					continue
+				H.apply_effects(2 SECONDS, 2 SECONDS)
+				shake_camera(H, 2, 1)
+			things_to_throw += affected
+
+	for(var/atom/movable/affected as anything in things_to_throw)
+		var/throwlocation = affected.loc
+		for(var/x in 1 to 6)
+			throwlocation = get_step(throwlocation, user.dir)
+		affected.throw_at(throwlocation, 3, 1, user, TRUE)
+	user.visible_message(span_warning("[user] conjures forth a wave of force, repelling anything in front of [user.p_them()]!"))
+	playsound(user,'sound/magic/swap.ogg', 75, TRUE)
+
+/turf/proc/Shake_turf(pixelshiftx = 2, pixelshifty = 2, duration = 2.5 SECONDS, shake_interval = 0.02 SECONDS)	//Atom/shake() does not work on turfs, this may be better off moved to HELPERS?
+	var/initialpixelx = pixel_x
+	var/initialpixely = pixel_y
+	animate(src, pixel_x = initialpixelx + rand(-pixelshiftx,pixelshiftx), pixel_y = initialpixelx + rand(-pixelshifty,pixelshifty), time = shake_interval, flags = ANIMATION_PARALLEL)
+	for (var/i in 3 to ((duration / shake_interval))) // Start at 3 because we already applied one, and need another to reset
+		animate(pixel_x = initialpixelx + rand(-pixelshiftx,pixelshiftx), pixel_y = initialpixely + rand(-pixelshifty,pixelshifty), time = shake_interval)
+	animate(pixel_x = initialpixelx, pixel_y = initialpixely, time = shake_interval)
 
 #undef PRESTI_CLEAN
 #undef PRESTI_SPARK

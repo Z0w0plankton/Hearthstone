@@ -208,7 +208,7 @@
 	clothes_req = FALSE
 	range = 8
 	projectile_type = /obj/projectile/magic/aoe/fireball/rogue/great
-	overlay_state = "fireball"
+	overlay_state = "fireball_wide"
 	sound = list('sound/magic/fireball.ogg')
 	active = FALSE
 	releasedrain = 50
@@ -237,7 +237,7 @@
 	clothes_req = FALSE
 	range = 8
 	projectile_type = /obj/projectile/magic/aoe/fireball/rogue2
-	overlay_state = "fireball"
+	overlay_state = "fireball_multi"
 	sound = list('sound/magic/whiteflame.ogg')
 	active = FALSE
 	releasedrain = 30
@@ -279,6 +279,7 @@
 	chargedrain = 0
 	chargetime = 0
 	warnie = "spellwarning"
+	overlay_state = "fetch"
 	no_early_release = TRUE
 	charging_slowdown = 1
 	chargedloop = /datum/looping_sound/invokegen
