@@ -499,6 +499,15 @@
 	verbage = "crafted"
 	craftdiff = 0
 
+/datum/crafting_recipe/roguetown/skullcrotch
+	name = "skull pants"
+	result = /obj/item/clothing/under/roguetown/trou/skullcrotchplate
+	reqs = list(/obj/item/natural/bone = 1,
+				/obj/item/natural/fibers = 1)
+	sellprice = 1
+	verbage_simple = "craft"
+	verbage = "crafted"
+	craftdiff = 0	
 
 /datum/crafting_recipe/roguetown/antlerhood
 	name = "antlerhood"
@@ -512,7 +521,13 @@
 	verbage = "sews"
 	craftdiff = 0
 
-
+/datum/crafting_recipe/roguetown/boneaxe
+	name = "bone axe"
+	result = /obj/item/rogueweapon/stoneaxe/boneaxe
+	reqs = list(/obj/item/grown/log/tree/small = 1,
+				/obj/item/natural/bone = 2,
+				/obj/item/natural/fibers = 1)
+	craftdiff = 2
 
 /datum/crafting_recipe/roguetown/bonespear
 	name = "bone spear"
@@ -521,12 +536,3 @@
 				/obj/item/natural/bone = 2,
 				/obj/item/natural/fibers = 1)
 	craftdiff = 3
-
-
-/datum/crafting_recipe/roguetown/boneaxe
-	name = "bone axe"
-	result = /obj/item/rogueweapon/stoneaxe/boneaxe
-	reqs = list(/obj/item/grown/log/tree/small = 1,
-				/obj/item/natural/bone = 2,
-				/obj/item/natural/fibers = 1)
-	craftdiff = 2
