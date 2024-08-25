@@ -451,8 +451,6 @@
 					changeNext_move(mmb_intent.clickcd)
 					if(mmb_intent.releasedrain)
 						rogfat_add(mmb_intent.releasedrain)
-				else if(mmb_intent.releasedrain)	// spells that arent targeted now also drain stamina
-					rogfat_add(mmb_intent.releasedrain)
 				return
 
 //Return TRUE to cancel other attack hand effects that respect it.

@@ -272,6 +272,7 @@
 	else
 		new wall_type(get_step(user, NORTH),user)
 		new wall_type(get_step(user, SOUTH),user)
+	return TRUE
 
 /obj/structure/forcefield_weak
 	var/mob/caster
@@ -320,7 +321,7 @@
 
 	addtimer(CALLBACK(src, PROC_REF(apply_slowdown), T, area_of_effect, 6 SECONDS, user), 0.6 SECONDS)
 	playsound(T,'sound/magic/webspin.ogg', 50, TRUE)
-
+	return TRUE
 /obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe/proc/apply_slowdown(turf/T, area_of_effect, duration)
 	for(var/mob/living/simple_animal/hostile/animal in range(area_of_effect, T))
 		animal.Paralyze(duration, updating = TRUE, ignore_canstun = TRUE)	//i think animal movement is coded weird, i cant seem to stun them
@@ -376,11 +377,10 @@
 			var/message = stripped_input(user, "You make a connection. What are you trying to say?")
 			to_chat(HL, "Arcyne whispers fill the back of my head, resolving into a clear, if distant, voice: </span><font color=#7246ff>\"[message]\"</font>")
 			// maybe an option to return a message, here?
-			return
+			return TRUE
 	to_chat(user, span_warning("I seek a mental connection, but can't find [input]."))
 	revert_cast()
-	return
-
+	
 /obj/effect/proc_holder/spell/invoked/push_spell
 	name = "Repulse"
 	desc = "Conjure forth a wave of energy, repelling anyone directly in front of you"
@@ -414,7 +414,8 @@
 		if(EAST)
 			lower_left = locate(user.x + 1, user.y - 1, user.z)
 			upper_right = locate(user.x + 1, user.y + 1, user.z)
-
+	return TRUE
+	
 	var/list/things_to_throw = list()
 	for(var/turf/affected_tile in block(lower_left, upper_right)) //everything in the 3x1 block is found.
 		affected_tile.Shake_turf(duration = 0.5 SECONDS)
@@ -472,6 +473,7 @@
 	to_chat(H, span_warning("I feel arcyne energy empowering my legs, I can jump further and higher."))
 	H.visible_message("[H]'s legs glow with arcyne energy.")
 	addtimer(CALLBACK(src, PROC_REF(remove_buff), H), wait = 30 SECONDS)
+	return TRUE
 
 /obj/effect/proc_holder/spell/invoked/longjump/proc/remove_buff(mob/living/user)
 	user.change_stat("speed", -speed_increase)
@@ -524,6 +526,7 @@
 		L.adjustBruteLoss(damage)
 		playsound(T, "genslash", 80, TRUE)
 		to_chat(L, "<span class='userdanger'>I'm cut by arcyne force!</span>")
+	return TRUE
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm
 	name = "Arcyne storm"
@@ -547,12 +550,13 @@
 /obj/effect/proc_holder/spell/invoked/arcyne_storm/cast(list/targets, mob/user = usr)
 	var/turf/T = get_turf(targets[1])
 	var/list/affected_turfs = list()
-	for(var/turf/turfs_in_range in view(range, T)) // use inrange instead of view
+	for(var/turf/turfs_in_range in range(range, T)) // use inrange instead of view
 		if(turfs_in_range.density)
 			continue
 		affected_turfs.Add(turfs_in_range)
 	for(var/i = 1, i < 21, i++)
 		addtimer(CALLBACK(src, PROC_REF(apply_damage), affected_turfs), wait = i * 1 SECONDS)
+	return TRUE
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm/proc/apply_damage(var/list/affected_turfs)
 	for(var/turf/damage_turf in affected_turfs)

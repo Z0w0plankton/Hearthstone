@@ -207,6 +207,7 @@
 	overlay_state = "wolf_head"
 	range = 1
 	cost = 1
+	xp_gain = TRUE
 
 	summon_type = list(/mob/living/simple_animal/hostile/retaliate/rogue/wolf )
 	cast_sound = 'sound/blank.ogg'
