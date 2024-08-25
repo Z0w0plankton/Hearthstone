@@ -201,6 +201,7 @@
 		/obj/effect/proc_holder/spell/invoked/longjump,
 		/obj/effect/proc_holder/spell/invoked/blade_burst,
 		/obj/effect/proc_holder/spell/invoked/arcyne_storm,
+		/obj/effect/proc_holder/spell/aoe_turf/conjure/Wolf,
 	)
 	for(var/i = 1, i <= spell_choices.len, i++)
 		choices["[spell_choices[i].name]: [spell_choices[i].cost]"] = spell_choices[i]
@@ -223,9 +224,9 @@
 //forcewall
 /obj/effect/proc_holder/spell/invoked/forcewall_weak
 	name = "Forcewall"
-	desc = ""
+	desc = "Conjure a wall of Arcyne force,  preventing anyone and anything other than you from moving"
 	school = "transmutation"
-	releasedrain = 20
+	releasedrain = 30
 	chargedrain = 1
 	chargetime = 15
 	charge_max = 35 SECONDS
@@ -254,7 +255,7 @@
 	attacked_sound = list('sound/combat/hits/onstone/wallhit.ogg', 'sound/combat/hits/onstone/wallhit2.ogg', 'sound/combat/hits/onstone/wallhit3.ogg')
 	opacity = 0
 	density = TRUE
-	max_integrity = 80	//requires balancing to find a good value?
+	max_integrity = 80	
 	CanAtmosPass = ATMOS_PASS_DENSITY
 	var/timeleft = 20 SECONDS  
 
@@ -291,8 +292,7 @@
 // no slowdown status effect defined, so this just immobilizes for now
 /obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe
 	name = "Ensnare"
-	desc = "placeholder"
-	sound = "placeholder"
+	desc = "Tendrils of arcyne force hold anyone in a small area in place"
 	cost = 1
 	xp_gain = TRUE
 	releasedrain = 20
@@ -322,6 +322,8 @@
 	playsound(T,'sound/magic/webspin.ogg', 50, TRUE)
 
 /obj/effect/proc_holder/spell/invoked/slowdown_spell_aoe/proc/apply_slowdown(turf/T, area_of_effect, duration)
+	for(var/mob/living/simple_animal/hostile/animal in range(area_of_effect, T))
+		animal.Paralyze(duration, updating = TRUE, ignore_canstun = TRUE)	//i think animal movement is coded weird, i cant seem to stun them
 	for(var/mob/living/L in range(area_of_effect, T))
 		if(L.anti_magic_check())
 			visible_message(span_warning("The tendrils of force can't seem to latch onto [L] "))  //antimagic needs some testing
@@ -342,7 +344,6 @@
 /obj/effect/proc_holder/spell/invoked/message
 	name = "Message"
 	desc = "Latch onto the mind of one who is familair to you, whispering a message into their head"
-	sound = "placeholder"
 	cost = 1
 	xp_gain = TRUE
 	releasedrain = 30
@@ -374,8 +375,6 @@
 		if(HL.real_name == input)
 			var/message = stripped_input(user, "You make a connection. What are you trying to say?")
 			to_chat(HL, "Arcyne whispers fill the back of my head, resolving into a clear, if distant, voice: </span><font color=#7246ff>\"[message]\"</font>")
-			// var/reply = "(<a href='?src=[REF(user)];choice=Message;skiprefresh=1'>Reply</a>)"
-			// to_chat(HL, "I feel the arcyne connection hold for a few more moments, I can [reply].")
 			// maybe an option to return a message, here?
 			return
 	to_chat(user, span_warning("I seek a mental connection, but can't find [input]."))
@@ -384,11 +383,10 @@
 
 /obj/effect/proc_holder/spell/invoked/push_spell
 	name = "Repulse"
-	desc = "placeholder"
-	sound = "placeholder"
+	desc = "Conjure forth a wave of energy, repelling anyone directly in front of you"
 	cost = 1
 	xp_gain = TRUE
-	releasedrain = 30
+	releasedrain = 40
 	chargedrain = 1
 	chargetime = 20
 	charge_max = 25 SECONDS
@@ -451,10 +449,9 @@
 /obj/effect/proc_holder/spell/invoked/longjump
 	name = "Long Jump"
 	desc = "Magically empower your legs, allowing you to jump further and higher than before"
-	sound = "placeholder"
 	cost = 1
 	xp_gain = TRUE
-	releasedrain = 30
+	releasedrain = 35
 	chargedrain = 1
 	chargetime = 30
 	charge_max = 80 SECONDS
@@ -464,8 +461,8 @@
 	charging_slowdown = 3
 	chargedloop = /datum/looping_sound/invokegen
 	associated_skill = /datum/skill/magic/arcane
-	overlay_state = ""
-	var/speed_increase
+	overlay_state = "jump"
+	var/speed_increase = 3
 
 /obj/effect/proc_holder/spell/invoked/longjump/cast(list/targets, mob/user = usr)
 	var/mob/living/H = user
@@ -474,22 +471,23 @@
 	H.change_stat("speed", speed_increase)
 	to_chat(H, span_warning("I feel arcyne energy empowering my legs, I can jump further and higher."))
 	H.visible_message("[H]'s legs glow with arcyne energy.")
-	sleep(30 SECONDS)
-	H.change_stat("speed", -speed_increase)
-	REMOVE_TRAIT(H, TRAIT_ZJUMP, MAGIC_TRAIT)
-	REMOVE_TRAIT(H, TRAIT_LEAPER, MAGIC_TRAIT)
-	to_chat(H, span_warning("The energy in my legs dissapates."))
+	addtimer(CALLBACK(src, PROC_REF(remove_buff), H), wait = 30 SECONDS)
+
+/obj/effect/proc_holder/spell/invoked/longjump/proc/remove_buff(mob/living/user)
+	user.change_stat("speed", -speed_increase)
+	REMOVE_TRAIT(user, TRAIT_ZJUMP, MAGIC_TRAIT)
+	REMOVE_TRAIT(user, TRAIT_LEAPER, MAGIC_TRAIT)
+	to_chat(user, span_warning("The energy in my legs dissapates."))
 
 /obj/effect/proc_holder/spell/invoked/blade_burst
 	name = "Blade Burst"
 	desc = "summon a storm of arcyne force in an area, wounding anything in that location"
-	sound = "placeholder"
-	cost = 2
+	cost = 1
 	xp_gain = TRUE
 	releasedrain = 30
 	chargedrain = 1
 	chargetime = 20
-	charge_max = 15 SECONDS
+	charge_max = 10 SECONDS
 	warnie = "spellwarning"
 	no_early_release = TRUE
 	movement_interrupt = FALSE
@@ -498,6 +496,7 @@
 	associated_skill = /datum/skill/magic/arcane
 	overlay_state = "blade_burst"
 	var/delay = 7
+	var/damage = 40
 
 /obj/effect/temp_visual/trap
 	icon = 'icons/effects/effects.dmi'
@@ -522,17 +521,16 @@
 	new /obj/effect/temp_visual/blade_burst(T)
 	playsound(T,'sound/magic/charged.ogg', 80, TRUE)
 	for(var/mob/living/L in T.contents)
-		L.adjustBruteLoss(40)
+		L.adjustBruteLoss(damage)
 		playsound(T, "genslash", 80, TRUE)
 		to_chat(L, "<span class='userdanger'>I'm cut by arcyne force!</span>")
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm
 	name = "Arcyne storm"
 	desc = "Conjure ripples of force into existance over a large area, injuring any who enter"
-	sound = "placeholder"
 	cost = 2
 	xp_gain = TRUE
-	releasedrain = 30
+	releasedrain = 50
 	chargedrain = 1
 	chargetime = 20
 	charge_max = 50 SECONDS
@@ -542,9 +540,9 @@
 	charging_slowdown = 2
 	chargedloop = /datum/looping_sound/invokegen
 	associated_skill = /datum/skill/magic/arcane
-	overlay_state = "placeholder"
+	overlay_state = "hierophant"
 	range = 3
-	var/damage = 5
+	var/damage = 8
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm/cast(list/targets, mob/user = usr)
 	var/turf/T = get_turf(targets[1])
@@ -554,7 +552,7 @@
 			continue
 		affected_turfs.Add(turfs_in_range)
 	for(var/i = 1, i < 21, i++)
-		addtimer(CALLBACK(src, PROC_REF(apply_damage)), wait = i * 1 SECONDS)
+		addtimer(CALLBACK(src, PROC_REF(apply_damage), affected_turfs), wait = i * 1 SECONDS)
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm/proc/apply_damage(var/list/affected_turfs)
 	for(var/turf/damage_turf in affected_turfs)
@@ -563,11 +561,6 @@
 			L.adjustBruteLoss(damage)
 			playsound(damage_turf, "genslash", 40, TRUE)
 			to_chat(L, "<span class='userdanger'>I'm cut by arcyne force!</span>")
-// /obj/effect/temp_visual/arcyne_storm
-// 	icon = 'icons/effects/effects.dmi'
-// 	icon_state = "hierophant_squares"
-
-
 
 #undef PRESTI_CLEAN
 #undef PRESTI_SPARK
