@@ -414,7 +414,6 @@
 		if(EAST)
 			lower_left = locate(user.x + 1, user.y - 1, user.z)
 			upper_right = locate(user.x + 1, user.y + 1, user.z)
-	return TRUE
 	
 	var/list/things_to_throw = list()
 	for(var/turf/affected_tile in block(lower_left, upper_right)) //everything in the 3x1 block is found.
@@ -438,6 +437,7 @@
 		affected.throw_at(throwlocation, 3, 1, user, TRUE)
 	user.visible_message(span_warning("[user] conjures forth a wave of force, repelling anything in front of [user.p_them()]!"))
 	playsound(user,'sound/magic/swap.ogg', 75, TRUE)
+	return TRUE
 
 /turf/proc/Shake_turf(pixelshiftx = 2, pixelshifty = 2, duration = 2.5 SECONDS, shake_interval = 0.02 SECONDS)	//Atom/shake() does not work on turfs, this may be better off moved to HELPERS?
 	var/initialpixelx = pixel_x
