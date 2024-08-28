@@ -550,7 +550,7 @@
 	associated_skill = /datum/skill/magic/arcane
 	overlay_state = "hierophant"
 	range = 2
-	var/damage = 8
+	var/damage = 10
 
 /obj/effect/proc_holder/spell/invoked/arcyne_storm/cast(list/targets, mob/user = usr)
 	var/turf/T = get_turf(targets[1])
